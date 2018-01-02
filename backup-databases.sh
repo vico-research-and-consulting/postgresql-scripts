@@ -27,6 +27,13 @@ if [ "$?" != 0 ];then
 	exit 1 
 fi
 
+LOCK_FILE="/tmp/postgresql-backup.lock"
+if ( ! ( set -C; : > $LOCK_FILE 2> /dev/null ) );then
+  echo "Already running"
+  exit 1
+fi
+trap "rm -f $LOCK_FILE; echo removed $LOCK_FILE" EXIT TERM INT
+
 sendStatus "INFO: STARTING DATABASE BACKUP"
 
 FAILED="0"
