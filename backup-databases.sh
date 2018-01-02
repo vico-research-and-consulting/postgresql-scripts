@@ -30,29 +30,32 @@ fi
 sendStatus "INFO: STARTING DATABASE BACKUP"
 
 FAILED="0"
+SUCCESSFUL="0"
+
 while read DBNAME;
 do
    echo "*** BACKUP $DBNAME ****************************************************************************"
    STARTTIME="$SECONDS"
    pg_dump $DBNAME |
-	gzip -c > ${DBNAME}-${TIMESTAMP}_currently_dumping.sql.gz
+	    gzip -c > ${DBNAME}-${TIMESTAMP}_currently_dumping.sql.gz && 
+	 mv ${DBNAME}-${TIMESTAMP}_currently_dumping.sql.gz ${DBNAME}-${TIMESTAMP}.sql.gz
    RET="$?"
 
    DURATION="$(( $(( $SECONDS - $STARTTIME )) / 60 ))"
    if [ "$RET" == "0" ];then
         sendStatus "INFO: SUCESSFULLY CREATED BACKUP FOR '$DBNAME' in $DURATION minutes"
-	mv ${DBNAME}-${TIMESTAMP}_currently_dumping.sql.gz ${DBNAME}-${TIMESTAMP}.sql.gz
+        SUCCESSFUL="$(( $SUCCESSFUL + 1))"
    else
-	FAILED="$($FAILED + 1)"
+     FAILED="$(($FAILED + 1))"
         sendStatus "INFO: FAILED TO BACKUP '$DBNAME'  in $DURATION minutes"
    fi
-done < <(psql -q -t -A -c "SELECT datname FROM pg_database WHERE datistemplate = false;" |xargs)
+done < <(psql -q -t -A -c "SELECT datname FROM pg_database WHERE datistemplate = false;")
 
 DURATION="$(( $(( $SECONDS - $STARTTIME_GLOBAL )) / 60 ))"
 if [ "$FAILED" -gt 0 ];then 
-  sendStatus "ERROR: FAILED ($FAILED failed backups, in $DURATION minutes)"
+  sendStatus "ERROR: FAILED ($FAILED failed backups,  $SUCCESSFUL successful backup ($DURATION minutes)"
 else
-  sendStatus "OK: BACKUPS WERE SUCCESSFUL ($DURATION minutes)"
+  sendStatus "OK: $SUCCESSFUL BACKUPS WERE SUCCESSFUL ($DURATION minutes)"
 fi
 
 echo "*** REMOVE OUTDATED BACKUPS **********************************************************************"
