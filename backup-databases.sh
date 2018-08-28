@@ -43,13 +43,17 @@ while read DBNAME;
 do
    echo "*** BACKUP $DBNAME ****************************************************************************"
    STARTTIME="$SECONDS"
-   pg_dump $DBNAME |
+
+   pg_dump -c $DBNAME -s | gzip -c > ${DBNAME}-${TIMESTAMP}_schema.sql.gz
+   RET1="$?"
+
+   pg_dump -c $DBNAME |
 	    gzip -c > ${DBNAME}-${TIMESTAMP}_currently_dumping.sql.gz && 
 	 mv ${DBNAME}-${TIMESTAMP}_currently_dumping.sql.gz ${DBNAME}-${TIMESTAMP}.sql.gz
-   RET="$?"
+   RET2="$?"
 
    DURATION="$(( $(( $SECONDS - $STARTTIME )) / 60 ))"
-   if [ "$RET" == "0" ];then
+   if ( [ "$RET1" == "0" ] && [ "$RET2" == "0" ] );then
         sendStatus "INFO: SUCESSFULLY CREATED BACKUP FOR '$DBNAME' in $DURATION minutes"
         SUCCESSFUL="$(( $SUCCESSFUL + 1))"
    else
